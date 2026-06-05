@@ -7,109 +7,71 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-def search_duckduckgo(query: str) -> str:
-    """Поиск через DuckDuckGo Instant Answer API"""
+def search_searxng(query: str) -> str:
+    """Поиск через SearXNG (бесплатно, без API-ключей, без карт)"""
     try:
         encoded_query = quote(query)
-        # Используем официальный API DuckDuckGo
-        url = f"https://api.duckduckgo.com/?q={encoded_query}&format=json&no_html=1&skip_disambig=1"
+        # Используем общедоступный экземпляр SearXNG
+        url = f"https://searx.be/search?q={encoded_query}&format=json"
         
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=15) as response:
             data = json.loads(response.read().decode('utf-8'))
         
         results = []
         
-        # Добавляем абстрактный ответ (краткое описание)
-        if data.get('AbstractText'):
-            results.append(f"📝 *Кратко:* {data['AbstractText'][:500]}")
-            if data.get('AbstractURL'):
-                results.append(f"🔗 Источник: {data['AbstractURL']}")
-        
-        # Добавляем связанные темы
-        if data.get('RelatedTopics'):
-            topics = []
-            for topic in data['RelatedTopics'][:5]:
-                if isinstance(topic, dict) and topic.get('Text'):
-                    text = topic['Text'][:200]
-                    if topic.get('FirstURL'):
-                        results.append(f"• {text}\n  Ссылка: {topic['FirstURL']}")
-                    else:
-                        results.append(f"• {text}")
-        
-        # Если есть прямые ответы (для простых вопросов)
-        if data.get('Answer'):
-            results.insert(0, f"✅ *Ответ:* {data['Answer']}")
+        for item in data.get('results', [])[:5]:
+            title = item.get('title', 'Без названия')
+            url_result = item.get('url', '')
+            content = item.get('content', '')[:200]
+            
+            if title and url_result:
+                results.append(f"🔹 *{title}*\n{content}\n[Ссылка]({url_result})")
         
         if not results:
-            # Если ничего не нашли через API, пробуем обычный поиск
-            return search_duckduckgo_fallback(query)
+            return f"❌ По запросу \"{query}\" ничего не найдено. Попробуйте другие ключевые слова."
         
-        return f"🔍 *Результаты поиска:* {query}\n\n" + "\n\n".join(results[:5])
+        return f"🔍 *Результаты поиска:* {query}\n\n" + "\n\n".join(results)
     
     except Exception as e:
-        return search_duckduckgo_fallback(query)
-
-def search_duckduckgo_fallback(query: str) -> str:
-    """Запасной метод поиска с другим User-Agent"""
-    try:
-        encoded_query = quote(query)
-        url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
-        
-        req = urllib.request.Request(
-            url, 
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-        )
-        
-        with urllib.request.urlopen(req, timeout=15) as response:
-            html = response.read().decode('utf-8')
-        
-        import re
-        results = []
-        matches = re.findall(r'<a rel="nofollow" class="result__a" href="([^"]+)".*?>(.*?)</a>', html, re.DOTALL)
-        
-        for href, title in matches[:3]:
-            title = re.sub(r'<[^>]+>', '', title).strip()
-            if title and href.startswith('http'):
-                results.append(f"🔹 [{title}]({href})")
-        
-        if not results:
-            return "❌ Ничего не найдено. Попробуйте:\n1. Уточнить запрос\n2. Задать вопрос иначе\n\nПримеры запросов:\n• курс доллара к рублю 2026\n• новости сегодня\n• Wikipedia Россия"
-        
-        return "🔍 *Найдено через поиск:*\n\n" + "\n\n".join(results)
-    
-    except Exception as e:
-        return f"❌ Ошибка поиска. Попробуйте позже.\nТехническая причина: {str(e)[:100]}"
+        return f"❌ Ошибка поиска: {str(e)[:150]}\n\nПопробуйте позже."
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 *Поисковый бот*\n\n"
-        "Я ищу информацию в интернете через DuckDuckGo.\n\n"
-        "Просто напишите любой вопрос или запрос.\n\n"
-        "📌 *Примеры:*\n"
+        "Я ищу информацию в интернете (бесплатно, без регистрации).\n\n"
+        "📌 *Как использовать:*\n"
+        "Просто напишите любой вопрос\n\n"
+        "✅ *Примеры:*\n"
         "• курс доллара 2026\n"
-        "• столица Франции\n"
-        "• последние новости науки\n"
-        "• рецепт борща\n\n"
-        "⚡ *Совет:* Чем точнее вопрос, тем лучше результат!",
+        "• погода в Москве\n"
+        "• новости сегодня\n\n"
+        "⚡ Работает 24/7!",
         parse_mode="Markdown"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.message.text
-    await update.message.reply_text(f"🔎 *Ищу:* {query}\n\nПодождите несколько секунд...", parse_mode="Markdown")
-    results = search_duckduckgo(query)
+    query = update.message.text.strip()
+    
+    if not query:
+        await update.message.reply_text("Пожалуйста, напишите что-нибудь для поиска.")
+        return
+    
+    await update.message.reply_text(f"🔎 *Ищу:* {query}...", parse_mode="Markdown")
+    results = search_searxng(query)
     await update.message.reply_text(results, parse_mode="Markdown", disable_web_page_preview=True)
 
 def main():
+    if not TELEGRAM_TOKEN:
+        print("❌ Ошибка: не указан TELEGRAM_TOKEN")
+        return
+    
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    print("✅ Бот успешно запущен и готов к работе!")
+    print("✅ Бот запущен с SearXNG (бесплатный поиск)!")
     app.run_polling()
 
 if __name__ == "__main__":
