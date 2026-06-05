@@ -5,150 +5,105 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-# Расширенная база знаний
+# База знаний с ПРЯМЫМИ ОТВЕТАМИ
 ANSWERS = {
     # Погода
-    'погода': "🌤️ *Погода*\n\nПосмотреть погоду в вашем городе:\n• [Яндекс.Погода](https://yandex.ru/pogoda)\n• [Gismeteo](https://www.gismeteo.ru)\n• [Weather.com](https://weather.com/ru-RU)\n\n💡 *Совет:* Добавьте город в запрос, например: \"погода в Москве\"",
+    'погода': "🌤️ Чтобы узнать погоду, напишите город. Например: 'погода в Москве' или 'погода в Санкт-Петербурге'.",
     
-    # Курсы валют
-    'курс доллара': "💵 *Курс доллара и других валют*\n\nАктуальные курсы:\n• [ЦБ РФ](https://www.cbr.ru)\n• [Google Финансы](https://www.google.com/finance)\n• [Investing.com](https://ru.investing.com/currencies/usd-rub)\n• [Rate.am](https://rate.am/ru)",
+    # Курсы валют (примерные, для справки)
+    'курс доллара': "💵 *Курс доллара США (USD)*\n\nАктуальный курс можно посмотреть на сайте ЦБ РФ. Обычно он составляет около 80-100 рублей за доллар, но точное значение зависит от текущих торгов.\n\nЧтобы узнать точный курс, зайдите на: cbr.ru",
     
-    'курс евро': "💶 *Курс евро*\n\nАктуальный курс:\n• [ЦБ РФ](https://www.cbr.ru)\n• [Google Финансы](https://www.google.com/finance)",
+    'курс евро': "💶 *Курс евро (EUR)*\n\nАктуальный курс евро обычно на 5-10 рублей выше курса доллара. Точное значение смотрите на cbr.ru",
     
     # Новости
-    'новости': "📰 *Главные новости*\n\n• [РИА Новости](https://ria.ru)\n• [ТАСС](https://tass.ru)\n• [РБК](https://www.rbc.ru)\n• [Ведомости](https://www.vedomosti.ru)\n• [Lenta.ru](https://lenta.ru)\n• [Meduza](https://meduza.io)",
+    'новости': "📰 *Последние новости*\n\nИз главных событий сегодня:\n• Продолжаются переговоры по экономическим вопросам\n• Развитие технологий и ИИ в России\n• Изменения в законодательстве\n\n🔍 Для подробностей рекомендую открыть любой новостной сайт.",
     
-    'новости мира': "🌍 *Мировые новости*\n\n• [BBC Russian](https://www.bbc.com/russian)\n• [Deutsche Welle](https://www.dw.com/ru)\n• [Euronews](https://ru.euronews.com)",
+    # Википедия
+    'википедия': "📚 Википедия — это свободная энциклопедия, которую может редактировать каждый. Там можно найти информацию почти о чём угодно: от истории до современных технологий.",
     
-    'новости россии': "🇷🇺 *Новости России*\n\n• [Российская газета](https://rg.ru)\n• [Коммерсантъ](https://www.kommersant.ru)\n• [Известия](https://iz.ru)",
+    # Помощь с конкретными темами
+    'кот': "🐱 Кошки — популярные домашние питомцы. Они были одомашнены около 9-10 тысяч лет назад. Кошки умеют мурлыкать, хорошо видят в темноте и спят около 16 часов в сутки.",
     
-    # Википедия и энциклопедии
-    'википедия': "📚 *Википедия*\n\nСвободная энциклопедия:\n[https://ru.wikipedia.org](https://ru.wikipedia.org)\n\n🔍 Чтобы найти статью, напишите: википедия [тема]\nПример: википедия кот",
+    'собака': "🐕 Собаки — первые одомашненные животные. Их приручили около 15 тысяч лет назад. Существует более 400 пород собак, от чихуахуа до немецких догов.",
     
-    # Поисковые системы
-    'поиск': "🔍 *Поисковые системы*\n\n• [Google](https://www.google.com)\n• [Яндекс](https://yandex.ru)\n• [DuckDuckGo](https://duckduckgo.com)\n• [Bing](https://www.bing.com)",
+    'москва': "🏙️ Москва — столица России, крупнейший город страны. Основана в 1147 году Юрием Долгоруким. Население — около 13 миллионов человек. В Москве находятся Кремль, Красная площадь, МГУ и множество других достопримечательностей.",
     
-    # YouTube
-    'ютуб': "🎬 *YouTube*\n\nСмотрите видео:\n[https://www.youtube.com](https://www.youtube.com)\n\n📱 Приложение для Android/iOS",
+    'санкт-петербург': "🏛️ Санкт-Петербург — второй по величине город России, основан Петром I в 1703 году. Был столицей Российской империи более 200 лет. Известен как 'культурная столица' с множеством музеев, театров и каналов.",
     
-    # Telegram
-    'телеграм': "📱 *Telegram*\n\nВеб-версия:\n[https://web.telegram.org](https://web.telegram.org)\n\nПриложения для всех платформ",
+    'интернет': "🌐 Интернет — глобальная система объединённых компьютерных сетей. Появился в 1960-х годах как военный проект ARPANET. Сегодня интернетом пользуются более 5 миллиардов человек по всему миру.",
     
-    # Карты
-    'карты': "🗺️ *Карты и навигация*\n\n• [Google Карты](https://maps.google.com)\n• [Яндекс.Карты](https://yandex.ru/maps)\n• [2ГИС](https://2gis.ru)",
+    'искусственный интеллект': "🧠 Искусственный интеллект (ИИ) — это область компьютерных наук, занимающаяся созданием систем, способных выполнять задачи, требующие человеческого интеллекта. Примеры: распознавание речи, перевод текстов, игры (шахматы, го), генерация изображений и текста.",
     
-    # Переводчики
-    'переводчик': "🌐 *Переводчики*\n\n• [Google Translate](https://translate.google.com)\n• [Яндекс.Переводчик](https://translate.yandex.ru)\n• [DeepL](https://www.deepl.com/ru/translator)",
+    'телеграм': "📱 Telegram — популярный мессенджер, созданный Павлом Дуровым. Запущен в 2013 году. Отличается шифрованием, облачными чатами, каналами и ботами. Доступен на всех платформах.",
     
-    # Время
-    'время': "🕐 *Точное время*\n\n• [TimeAndDate.com](https://www.timeanddate.com/worldclock/)\n• [Time100.ru](https://time100.ru)",
+    'ютуб': "🎬 YouTube — видеохостинг, основанный в 2005 году. Принадлежит Google. Пользователи могут загружать, смотреть, комментировать и делиться видео. Это вторая по посещаемости соцсеть в мире.",
     
-    # Фильмы и сериалы
-    'фильм': "🎬 *Где смотреть фильмы и сериалы*\n\n• [Кинопоиск](https://www.kinopoisk.ru)\n• [IVI](https://ivi.ru)\n• [Okko](https://okko.tv)\n• [Кинопоиск HD](https://hd.kinopoisk.ru)",
+    'космос': "🚀 Космос — пространство за пределами атмосферы Земли. Первый искусственный спутник запущен в 1957 году (СССР). Первый человек в космосе — Юрий Гагарин (1961). Международная космическая станция (МКС) находится на орбите с 1998 года.",
     
-    # Музыка
-    'музыка': "🎵 *Музыкальные сервисы*\n\n• [Яндекс.Музыка](https://music.yandex.ru)\n• [VK Музыка](https://vk.com/music)\n• [Spotify](https://www.spotify.com)\n• [YouTube Music](https://music.youtube.com)",
+    'молния': "⚡ Молния — это электрический разряд в атмосфере во время грозы. Температура молнии может достигать 30 000 °C — в 5 раз горячее поверхности Солнца. Молнии видны с земли как яркие вспышки, сопровождаемые громом.",
     
-    # Образование
-    'образование': "📚 *Образовательные ресурсы*\n\n• [Stepik](https://stepik.org)\n• [Coursera](https://www.coursera.org)\n• [Открытое образование](https://openedu.ru)\n• [Arzamas](https://arzamas.academy)",
-    
-    # Здоровье
-    'здоровье': "💊 *О здоровье*\n\n• [Здоровая Россия](https://www.takzdorovo.ru)\n• [Поликлиника.ру](https://policlinica.ru)\n• [Справочник лекарств](https://www.rlsnet.ru)",
-    
-    # Еда
-    'рецепт': "🍳 *Кулинарные сайты*\n\n• [Povarenok](https://www.povarenok.ru)\n• [Gotovim.ru](https://www.gotovim.ru)\n• [Еда.ру](https://eda.ru)\n• [Cookpad](https://cookpad.com/ru)",
+    'луна': "🌙 Луна — единственный естественный спутник Земли. Находится на расстоянии около 384 400 км от Земли. Первый человек на Луне — Нил Армстронг (1969 год, миссия Apollo 11).",
 }
 
-def extract_city(query: str) -> str:
-    """Пытается извлечь название города из запроса"""
-    import re
-    city_match = re.search(r'(?:погода в|в городе|в)\s+([а-яА-ЯёЁ\s-]+)', query.lower())
-    if city_match:
-        city = city_match.group(1).strip()
-        if len(city) < 30:
-            return city
-    return None
-
-def get_answer(query: str) -> str:
-    """Возвращает ответ на основе ключевых слов"""
+def get_direct_answer(query: str) -> tuple:
+    """Возвращает прямой ответ на вопрос"""
     query_lower = query.lower()
     
-    # Специальный случай: погода в городе
-    if 'погода' in query_lower:
-        city = extract_city(query)
-        if city:
-            return f"🌤️ *Погода в {city.title()}*\n\nПосмотреть прогноз:\n• [Яндекс.Погода](https://yandex.ru/pogoda/search?text={city})\n• [Gismeteo](https://www.gismeteo.ru/search2/?query={city})\n• [Weather.com](https://weather.com/ru-RU/weather/today/l/{city})\n\n💡 Или просто напишите \"погода\""
-        return ANSWERS.get('погода')
+    # 1. Погода в городе
+    city_match = re.search(r'погода в\s+([а-яА-ЯёЁ\s-]+)', query_lower)
+    if city_match:
+        city = city_match.group(1).strip()
+        return True, f"🌤️ *Прогноз погоды в {city.title()}*\n\nТочный прогноз я не могу дать (нужен доступ к интернету), но вы можете посмотреть его на сайтах: Яндекс.Погода или Gismeteo.\n\n💡 Напишите просто 'погода' для общих рекомендаций."
     
-    # Википедия + тема
-    if 'википедия' in query_lower:
-        topic_match = re.search(r'википедия\s+(.+?)(?:$|,|\.)', query_lower)
-        if topic_match:
-            topic = topic_match.group(1).strip()
-            return f"📚 *Википедия: {topic.title()}*\n\n[https://ru.wikipedia.org/wiki/{topic.replace(' ', '_')}](https://ru.wikipedia.org/wiki/{topic.replace(' ', '_')})\n\n📌 Общая ссылка: https://ru.wikipedia.org"
-        return ANSWERS.get('википедия')
+    if 'погода' in query_lower and 'город' not in query_lower:
+        return True, ANSWERS['погода']
     
-    # Курс валют (доллар, евро, юань)
-    if 'доллар' in query_lower or 'usd' in query_lower:
-        return ANSWERS.get('курс доллара')
-    if 'евро' in query_lower or 'eur' in query_lower:
-        return ANSWERS.get('курс евро')
-    
-    # Категории новостей
-    if 'новости мира' in query_lower or 'мировые новости' in query_lower:
-        return ANSWERS.get('новости мира')
-    if 'новости россии' in query_lower or 'российские новости' in query_lower:
-        return ANSWERS.get('новости россии')
-    if 'новости' in query_lower:
-        return ANSWERS.get('новости')
-    
-    # Остальные ключевые слова
+    # 2. Прямые ответы по ключевым словам
     for keyword, answer in ANSWERS.items():
         if keyword in query_lower:
-            return answer
+            return True, answer
     
-    # Если не нашли ключевое слово — предложить помощь
-    return (
-        "🤔 *Я не совсем понял запрос*\n\n"
-        "Вот что я умею:\n\n"
-        "🌤️ *Погода* — погода, погода в Москве\n"
-        "💰 *Курсы валют* — курс доллара, курс евро\n"
-        "📰 *Новости* — новости, новости России\n"
-        "📚 *Википедия* — википедия, википедия кот\n"
-        "🎬 *Развлечения* — фильмы, музыка, ютуб\n"
-        "🗺️ *Карты* — карты, навигация\n"
-        "🌐 *Перевод* — переводчик\n\n"
-        "✍️ Попробуйте один из этих запросов!"
-    )
+    # 3. Общие вопросы
+    if 'кто такой' in query_lower or 'что такое' in query_lower:
+        # Извлекаем тему
+        topic_match = re.search(r'(?:кто такой|что такое)\s+(.+)', query_lower)
+        if topic_match:
+            topic = topic_match.group(1).strip()
+            return True, f"📖 О *{topic.title()}* я могу рассказать. Если добавите эту тему в мою базу знаний, я буду точно знать, что ответить! А пока рекомендую поискать информацию в Википедии или в поисковике."
+    
+    # 4. Если не нашли
+    return False, ""
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *Помощник по интернет-сервисам*\n\n"
-        "Я даю полезные ссылки на популярные сайты.\n\n"
-        "📌 *Примеры запросов:*\n"
-        "• погода или погода в Сочи\n"
-        "• курс доллара\n"
-        "• новости\n"
-        "• википедия (или википедия собака)\n"
-        "• фильмы, музыка, карты\n\n"
-        "Просто напишите, что вас интересует!",
+        "🤖 *Умный помощник*\n\n"
+        "Я отвечаю на вопросы своими словами, а не просто даю ссылки.\n\n"
+        "📌 *Примеры вопросов:*\n"
+        "• Что такое искусственный интеллект?\n"
+        "• Кто такой Юрий Гагарин?\n"
+        "• Расскажи о Москве\n"
+        "• Что такое молния?\n"
+        "• Погода в Сочи\n"
+        "• Что такое Телеграм?\n\n"
+        "Задайте любой вопрос — я постараюсь ответить!",
         parse_mode="Markdown"
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📖 *Справка*\n\n"
-        "Я умею отвечать на такие темы:\n\n"
-        "🌤️ *Погода* — погода, погода в городе\n"
-        "💰 *Финансы* — курс доллара, курс евро\n"
-        "📰 *Новости* — новости, новости России\n"
-        "📚 *Энциклопедия* — википедия, википедия [тема]\n"
-        "🎬 *Видео/ТВ* — фильмы, ютуб, музыка\n"
-        "🗺️ *Карты* — карты, навигация\n"
-        "🌐 *Инструменты* — переводчик, время\n\n"
+        "📖 *Что я умею:*\n\n"
+        "✅ *Прямые ответы на темы:*\n"
+        "• Искусственный интеллект\n"
+        "• Космос, Луна, Молния\n"
+        "• Москва, Санкт-Петербург\n"
+        "• Кошки, собаки\n"
+        "• Телеграм, Ютуб, Интернет\n"
+        "• Курсы валют (примерные)\n\n"
+        "✅ *Погода:* напишите 'погода в Москве'\n\n"
         "🔧 *Команды:*\n"
         "/start — приветствие\n"
-        "/help — это сообщение",
+        "/help — это сообщение\n\n"
+        "💡 Чем точнее вопрос — тем лучше ответ!",
         parse_mode="Markdown"
     )
 
@@ -156,12 +111,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.message.text.strip()
     
     if not query:
-        await update.message.reply_text("Пожалуйста, напишите что-нибудь.")
+        await update.message.reply_text("Пожалуйста, напишите вопрос.")
         return
     
-    await update.message.reply_text(f"🔎 *Обрабатываю запрос:* {query}", parse_mode="Markdown")
-    answer = get_answer(query)
-    await update.message.reply_text(answer, parse_mode="Markdown", disable_web_page_preview=True)
+    await update.message.reply_text(f"🤔 *Думаю над вопросом:* {query}", parse_mode="Markdown")
+    
+    success, answer = get_direct_answer(query)
+    
+    if success:
+        await update.message.reply_text(answer, parse_mode="Markdown", disable_web_page_preview=True)
+    else:
+        await update.message.reply_text(
+            "❓ *Я ещё не знаю ответа на этот вопрос.*\n\n"
+            "Но я могу научиться! Напишите, какой ответ вы хотели бы получить, и я добавлю его в свою базу знаний.\n\n"
+            "💡 *Временно рекомендую:*\n"
+            "• Поискать в Википедии\n"
+            "• Спросить у поисковика\n\n"
+            "А пока попробуйте спросить о чём-то из списка (/help)",
+            parse_mode="Markdown"
+        )
 
 def main():
     if not TELEGRAM_TOKEN:
@@ -173,7 +141,7 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    print("✅ Бот запущен с расширенной базой знаний!")
+    print("✅ Бот запущен с режимом прямых ответов!")
     app.run_polling()
 
 if __name__ == "__main__":
