@@ -1,6 +1,7 @@
 import os
-import json
-import httpx
+import re
+import urllib.request
+from urllib.parse import quote
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from groq import AsyncGroq
@@ -12,18 +13,19 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 groq_client = AsyncGroq(api_key=GROQ_API_KEY)
 
 def search_duckduckgo(query: str) -> str:
-    """Бесплатный поиск через DuckDuckGo HTML API"""
+    """Бесплатный поиск через DuckDuckGo (без httpx, только встроенные библиотеки)"""
     try:
-        url = "https://html.duckduckgo.com/html/"
-        params = {"q": query}
-        headers = {"User-Agent": "Mozilla/5.0"}
+        encoded_query = quote(query)
+        url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
         
-        response = httpx.post(url, data=params, headers=headers, timeout=15)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         
-        # Простой парсинг результатов
-        import re
+        with urllib.request.urlopen(req, timeout=15) as response:
+            html = response.read().decode('utf-8')
+        
+        # Парсим результаты
         results = []
-        matches = re.findall(r'<a rel="nofollow" class="result__a" href="([^"]+)".*?>(.*?)</a>', response.text, re.DOTALL)
+        matches = re.findall(r'<a rel="nofollow" class="result__a" href="([^"]+)".*?>(.*?)</a>', html, re.DOTALL)
         
         for href, title in matches[:3]:
             title = re.sub(r'<[^>]+>', '', title).strip()
@@ -33,18 +35,14 @@ def search_duckduckgo(query: str) -> str:
         if not results:
             return "По вашему запросу ничего не найдено."
         
-        return "\n".join(results) + "\n\n🔍 *Источник:* DuckDuckGo"
+        return "\n".join(results)
     except Exception as e:
         return f"Ошибка поиска: {str(e)}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 *Я бот с поиском в интернете!*\n\n"
-        "Просто задайте вопрос, и я найду актуальную информацию.\n"
-        "Например:\n"
-        "• Курс доллара на сегодня\n"
-        "• Новости науки 2026\n"
-        "• Как приготовить пиццу\n\n"
+        "Просто задайте вопрос, и я найду актуальную информацию.\n\n"
         "Команды:\n"
         "/search <запрос> — поиск без ИИ\n"
         "/reset — очистить историю",
@@ -104,7 +102,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["history"].append({"role": "assistant", "content": reply})
         
         # Отправляем ответ + ссылки на источники
-        full_reply = f"{reply}\n\n{search_results}"
+        full_reply = f"{reply}\n\n🔍 *Источники:*\n{search_results}"
         await update.message.reply_text(full_reply, parse_mode="Markdown", disable_web_page_preview=True)
         
     except Exception as e:
