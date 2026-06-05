@@ -6,13 +6,15 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+# ВАШ АДРЕС SearXNG на Railway (без слеша в конце)
+SEARXNG_URL = os.getenv("SEARXNG_URL", "https://your-app-name.up.railway.app")
 
 def search_searxng(query: str) -> str:
-    """Поиск через SearXNG (бесплатно, без API-ключей, без карт)"""
+    """Поиск через СВОЙ экземпляр SearXNG на Railway"""
     try:
         encoded_query = quote(query)
-        # Используем общедоступный экземпляр SearXNG
-        url = f"https://searx.be/search?q={encoded_query}&format=json"
+        # Используем JSON API вашего собственного сервера
+        url = f"{SEARXNG_URL}/search?q={encoded_query}&format=json"
         
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         
@@ -30,24 +32,23 @@ def search_searxng(query: str) -> str:
                 results.append(f"🔹 *{title}*\n{content}\n[Ссылка]({url_result})")
         
         if not results:
-            return f"❌ По запросу \"{query}\" ничего не найдено. Попробуйте другие ключевые слова."
+            return f"❌ По запросу \"{query}\" ничего не найдено."
         
         return f"🔍 *Результаты поиска:* {query}\n\n" + "\n\n".join(results)
     
     except Exception as e:
-        return f"❌ Ошибка поиска: {str(e)[:150]}\n\nПопробуйте позже."
+        return f"❌ Ошибка поиска: {str(e)[:150]}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 *Поисковый бот*\n\n"
-        "Я ищу информацию в интернете (бесплатно, без регистрации).\n\n"
+        "Я ищу информацию через собственный поисковый сервер.\n\n"
         "📌 *Как использовать:*\n"
         "Просто напишите любой вопрос\n\n"
         "✅ *Примеры:*\n"
         "• курс доллара 2026\n"
         "• погода в Москве\n"
-        "• новости сегодня\n\n"
-        "⚡ Работает 24/7!",
+        "• новости сегодня",
         parse_mode="Markdown"
     )
 
@@ -71,7 +72,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    print("✅ Бот запущен с SearXNG (бесплатный поиск)!")
+    print(f"✅ Бот запущен с SearXNG: {SEARXNG_URL}")
     app.run_polling()
 
 if __name__ == "__main__":
