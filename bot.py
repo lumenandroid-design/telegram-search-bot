@@ -28,7 +28,7 @@ def search_web(query: str) -> str:
         if answer:
             return answer
         else:
-            return "🤔 Не нашёл точного ответа. Попробуйте переформулировать вопрос."
+            return "🤔 Ты какую-то хуйню спросил"
     except Exception as e:
         return f"❌ Ошибка поиска: {str(e)}"
 
@@ -39,7 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Примеры:\n"
         "• Погода в Москве\n"
         "• Курс доллара\n"
-        "• Кто такой Пушкин"
+        "• Кто такие пидоры?"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
