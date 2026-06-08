@@ -15,10 +15,10 @@ def search_web(query: str) -> str:
     url = "https://api.tavily.com/search"
     payload = {
         "api_key": TAVILY_API_KEY,
-        "query": query,
-        "include_answer": True,
-        "include_raw_content": False,
-        "max_results": 3
+        "query": f"Ответь на русском языке: {query}",
+    "include_answer": True,
+    "include_raw_content": False,
+    "max_results": 3
     }
     
     try:
