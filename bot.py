@@ -5,7 +5,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 # ========== НАСТРОЙКИ ==========
 TOKEN = "8900701358:AAEizc7UClRl-VoG28DEBC8Wand4gMEoETw"
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+TAVILY_API_KEY = "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"
 SEARCH_ENGINE = "tavily"  # используем Tavily
 
 def search_web(query: str) -> str:
