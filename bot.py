@@ -1,147 +1,117 @@
 import os
-import re
+import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+# ========== НАСТРОЙКИ ==========
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")  # Токен из переменных окружения
 
-# База знаний с ПРЯМЫМИ ОТВЕТАМИ
-ANSWERS = {
-    # Погода
-    'погода': "🌤️ Чтобы узнать погоду, напишите город. Например: 'погода в Москве' или 'погода в Санкт-Петербурге'.",
-    
-    # Курсы валют (примерные, для справки)
-    'курс доллара': "💵 *Курс доллара США (USD)*\n\nАктуальный курс можно посмотреть на сайте ЦБ РФ. Обычно он составляет около 80-100 рублей за доллар, но точное значение зависит от текущих торгов.\n\nЧтобы узнать точный курс, зайдите на: cbr.ru",
-    
-    'курс евро': "💶 *Курс евро (EUR)*\n\nАктуальный курс евро обычно на 5-10 рублей выше курса доллара. Точное значение смотрите на cbr.ru",
-    
-    # Новости
-    'новости': "📰 *Последние новости*\n\nИз главных событий сегодня:\n• Продолжаются переговоры по экономическим вопросам\n• Развитие технологий и ИИ в России\n• Изменения в законодательстве\n\n🔍 Для подробностей рекомендую открыть любой новостной сайт.",
-    
-    # Википедия
-    'википедия': "📚 Википедия — это свободная энциклопедия, которую может редактировать каждый. Там можно найти информацию почти о чём угодно: от истории до современных технологий.",
-    
-    # Помощь с конкретными темами
-    'кот': "🐱 Кошки — популярные домашние питомцы. Они были одомашнены около 9-10 тысяч лет назад. Кошки умеют мурлыкать, хорошо видят в темноте и спят около 16 часов в сутки.",
-    
-    'собака': "🐕 Собаки — первые одомашненные животные. Их приручили около 15 тысяч лет назад. Существует более 400 пород собак, от чихуахуа до немецких догов.",
-    
-    'москва': "🏙️ Москва — столица России, крупнейший город страны. Основана в 1147 году Юрием Долгоруким. Население — около 13 миллионов человек. В Москве находятся Кремль, Красная площадь, МГУ и множество других достопримечательностей.",
-    
-    'санкт-петербург': "🏛️ Санкт-Петербург — второй по величине город России, основан Петром I в 1703 году. Был столицей Российской империи более 200 лет. Известен как 'культурная столица' с множеством музеев, театров и каналов.",
-    
-    'интернет': "🌐 Интернет — глобальная система объединённых компьютерных сетей. Появился в 1960-х годах как военный проект ARPANET. Сегодня интернетом пользуются более 5 миллиардов человек по всему миру.",
-    
-    'искусственный интеллект': "🧠 Искусственный интеллект (ИИ) — это область компьютерных наук, занимающаяся созданием систем, способных выполнять задачи, требующие человеческого интеллекта. Примеры: распознавание речи, перевод текстов, игры (шахматы, го), генерация изображений и текста.",
-    
-    'телеграм': "📱 Telegram — популярный мессенджер, созданный Павлом Дуровым. Запущен в 2013 году. Отличается шифрованием, облачными чатами, каналами и ботами. Доступен на всех платформах.",
-    
-    'ютуб': "🎬 YouTube — видеохостинг, основанный в 2005 году. Принадлежит Google. Пользователи могут загружать, смотреть, комментировать и делиться видео. Это вторая по посещаемости соцсеть в мире.",
-    
-    'космос': "🚀 Космос — пространство за пределами атмосферы Земли. Первый искусственный спутник запущен в 1957 году (СССР). Первый человек в космосе — Юрий Гагарин (1961). Международная космическая станция (МКС) находится на орбите с 1998 года.",
-    
-    'молния': "⚡ Молния — это электрический разряд в атмосфере во время грозы. Температура молнии может достигать 30 000 °C — в 5 раз горячее поверхности Солнца. Молнии видны с земли как яркие вспышки, сопровождаемые громом.",
-    
-    'луна': "🌙 Луна — единственный естественный спутник Земли. Находится на расстоянии около 384 400 км от Земли. Первый человек на Луне — Нил Армстронг (1969 год, миссия Apollo 11).",
-}
+# ВАРИАНТ 1: Tavily (рекомендуется, сам даёт ответ без ссылок)
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")  # Получить бесплатно на app.tavily.com
 
-def get_direct_answer(query: str) -> tuple:
-    """Возвращает прямой ответ на вопрос"""
-    query_lower = query.lower()
-    
-    # 1. Погода в городе
-    city_match = re.search(r'погода в\s+([а-яА-ЯёЁ\s-]+)', query_lower)
-    if city_match:
-        city = city_match.group(1).strip()
-        return True, f"🌤️ *Прогноз погоды в {city.title()}*\n\nТочный прогноз я не могу дать (нужен доступ к интернету), но вы можете посмотреть его на сайтах: Яндекс.Погода или Gismeteo.\n\n💡 Напишите просто 'погода' для общих рекомендаций."
-    
-    if 'погода' in query_lower and 'город' not in query_lower:
-        return True, ANSWERS['погода']
-    
-    # 2. Прямые ответы по ключевым словам
-    for keyword, answer in ANSWERS.items():
-        if keyword in query_lower:
-            return True, answer
-    
-    # 3. Общие вопросы
-    if 'кто такой' in query_lower or 'что такое' in query_lower:
-        # Извлекаем тему
-        topic_match = re.search(r'(?:кто такой|что такое)\s+(.+)', query_lower)
-        if topic_match:
-            topic = topic_match.group(1).strip()
-            return True, f"📖 О *{topic.title()}* я могу рассказать. Если добавите эту тему в мою базу знаний, я буду точно знать, что ответить! А пока рекомендую поискать информацию в Википедии или в поисковике."
-    
-    # 4. Если не нашли
-    return False, ""
+# ВАРИАНТ 2: Brave Search (альтернатива, нужно брать описание)
+BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")  # Получить на brave.com/search/api/
 
+# Какой поисковик использовать? (пишем "tavily" или "brave")
+SEARCH_ENGINE = "tavily"  # поменяйте на "brave", если получили ключ Brave
+
+# ========== ФУНКЦИИ ПОИСКА (без ссылок) ==========
+def search_web(query: str) -> str:
+    """Ищет в интернете и возвращает ТОЛЬКО текст ответа (без ссылок)"""
+    
+    if SEARCH_ENGINE == "tavily" and TAVILY_API_KEY:
+        return _search_tavily(query)
+    elif SEARCH_ENGINE == "brave" and BRAVE_API_KEY:
+        return _search_brave(query)
+    else:
+        return "⚠️ Поиск не настроен. Добавьте API-ключ в переменные окружения."
+
+def _search_tavily(query: str) -> str:
+    """Tavily сам возвращает готовый ответ без ссылок"""
+    url = "https://api.tavily.com/search"
+    payload = {
+        "api_key": TAVILY_API_KEY,
+        "query": query,
+        "include_answer": True,      # КЛЮЧЕВОЙ параметр!
+        "include_raw_content": False,
+        "max_results": 3
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        data = response.json()
+        answer = data.get("answer", "")
+        
+        if answer:
+            return answer
+        else:
+            return "🤔 Не нашёл точного ответа. Попробуйте переформулировать вопрос."
+    except Exception as e:
+        return f"❌ Ошибка поиска: {str(e)}"
+
+def _search_brave(query: str) -> str:
+    """Brave — собираем только описания, ссылки отбрасываем"""
+    url = "https://api.search.brave.com/res/v1/web/search"
+    headers = {
+        "Accept": "application/json",
+        "X-Subscription-Token": BRAVE_API_KEY
+    }
+    params = {"q": query, "count": 5}
+    
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        data = response.json()
+        
+        snippets = []
+        for item in data.get("web", {}).get("results", []):
+            desc = item.get("description", "")
+            if desc:
+                snippets.append(desc)
+        
+        if snippets:
+            # Просто склеиваем описания (можно передать в GPT, если есть)
+            return "\n\n".join(snippets[:3])
+        else:
+            return "🔍 Ничего не найдено."
+    except Exception as e:
+        return f"❌ Ошибка: {str(e)}"
+
+# ========== ОБРАБОТЧИКИ КОМАНД ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *Умный помощник*\n\n"
-        "Я отвечаю на вопросы своими словами, а не просто даю ссылки.\n\n"
-        "📌 *Примеры вопросов:*\n"
-        "• Что такое искусственный интеллект?\n"
-        "• Кто такой Юрий Гагарин?\n"
-        "• Расскажи о Москве\n"
-        "• Что такое молния?\n"
-        "• Погода в Сочи\n"
-        "• Что такое Телеграм?\n\n"
-        "Задайте любой вопрос — я постараюсь ответить!",
-        parse_mode="Markdown"
-    )
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📖 *Что я умею:*\n\n"
-        "✅ *Прямые ответы на темы:*\n"
-        "• Искусственный интеллект\n"
-        "• Космос, Луна, Молния\n"
-        "• Москва, Санкт-Петербург\n"
-        "• Кошки, собаки\n"
-        "• Телеграм, Ютуб, Интернет\n"
-        "• Курсы валют (примерные)\n\n"
-        "✅ *Погода:* напишите 'погода в Москве'\n\n"
-        "🔧 *Команды:*\n"
-        "/start — приветствие\n"
-        "/help — это сообщение\n\n"
-        "💡 Чем точнее вопрос — тем лучше ответ!",
-        parse_mode="Markdown"
+        "🌍 Привет! Я сам ищу ответы в интернете.\n"
+        "Просто напиши вопрос — и я отвечу своими словами, без ссылок.\n\n"
+        "Примеры:\n"
+        "• Погода в Москве\n"
+        "• Курс доллара\n"
+        "• Кто такой Пушкин"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.message.text.strip()
+    user_query = update.message.text
     
-    if not query:
-        await update.message.reply_text("Пожалуйста, напишите вопрос.")
-        return
+    # Показываем индикатор "печатает..."
+    await update.message.chat.send_action(action="typing")
     
-    await update.message.reply_text(f"🤔 *Думаю над вопросом:* {query}", parse_mode="Markdown")
+    # Ищем ответ
+    answer = search_web(user_query)
     
-    success, answer = get_direct_answer(query)
-    
-    if success:
-        await update.message.reply_text(answer, parse_mode="Markdown", disable_web_page_preview=True)
-    else:
-        await update.message.reply_text(
-            "❓ *Я ещё не знаю ответа на этот вопрос.*\n\n"
-            "Но я могу научиться! Напишите, какой ответ вы хотели бы получить, и я добавлю его в свою базу знаний.\n\n"
-            "💡 *Временно рекомендую:*\n"
-            "• Поискать в Википедии\n"
-            "• Спросить у поисковика\n\n"
-            "А пока попробуйте спросить о чём-то из списка (/help)",
-            parse_mode="Markdown"
-        )
+    # Отправляем результат (только текст, без ссылок!)
+    await update.message.reply_text(answer)
 
+# ========== ЗАПУСК БОТА ==========
 def main():
-    if not TELEGRAM_TOKEN:
-        print("❌ Ошибка: не указан TELEGRAM_TOKEN")
+    if not TOKEN:
+        print("❌ Ошибка: не найден TELEGRAM_BOT_TOKEN")
         return
     
-    app = Application.builder().token(TELEGRAM_TOKEN).build()
+    app = Application.builder().token(TOKEN).build()
+    
+    # Регистрируем обработчики
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    print("✅ Бот запущен с режимом прямых ответов!")
+    print("✅ Бот запущен и ищет ответы самостоятельно!")
     app.run_polling()
 
 if __name__ == "__main__":
