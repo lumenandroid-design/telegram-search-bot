@@ -1,3 +1,5 @@
+print("TELEGRAM_BOT_TOKEN exists:", bool(os.getenv("TELEGRAM_BOT_TOKEN")))
+print("TAVILY_API_KEY exists:", bool(os.getenv("TAVILY_API_KEY")))
 import os
 import requests
 from telegram import Update
