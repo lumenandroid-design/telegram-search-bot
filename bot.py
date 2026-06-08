@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # ========== НАСТРОЙКИ ==========
-TOKEN = os.getenv"8900701358:AAEizc7UClRl-VoG28DEBC8Wand4gMEoETw"
+TOKEN = "8900701358:AAEizc7UClRl-VoG28DEBC8Wand4gMEoETw"
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 SEARCH_ENGINE = "tavily"  # используем Tavily
 
